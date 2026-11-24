@@ -1,5 +1,8 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { createMcpHandler, isLegacyRequest, McpServer } from '@modelcontextprotocol/server';
 import { createMcp } from '../mcp.mjs';
+
+const maxRequestBodySize = 16_384;
 
 function createRelayRequest(env, relayFetch = fetch) {
   return async (path, body) => {
@@ -56,13 +59,17 @@ export function createSiteWorker(relayFetch) {
       const requestRelay = env.RINGER_SITE_OWNER_ID && request.headers.get('oai-authenticated-user-id') === env.RINGER_SITE_OWNER_ID
         ? createRelayRequest(env, relayFetch)
         : () => { throw new Error('Connect the plugin with the configured Site owner account.'); };
-      const server = createMcp(requestRelay, { telegramMessaging: env.RINGER_TELEGRAM_MESSAGING === '1' });
-      const transport = new WebStandardStreamableHTTPServerTransport({
-        enableJsonResponse: true,
-        maxRequestBodySize: 16_384,
+      const options = { telegramMessaging: env.RINGER_TELEGRAM_MESSAGING === '1' };
+      if (await isLegacyRequest(request, undefined, { maxRequestBodySize })) {
+        const server = createMcp(requestRelay, options);
+        const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true, maxRequestBodySize });
+        await server.connect(transport);
+        return transport.handleRequest(request);
+      }
+      const handler = createMcpHandler(() => createMcp(requestRelay, { ...options, Server: McpServer }), {
+        legacy: 'reject', maxRequestBodySize,
       });
-      await server.connect(transport);
-      return transport.handleRequest(request);
+      return handler.fetch(request);
     },
   };
 }

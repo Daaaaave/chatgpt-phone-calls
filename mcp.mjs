@@ -16,8 +16,8 @@ async function localRequest(path, body) {
   }
 }
 
-export function createMcp(request = localRequest, { telegramMessaging = false } = {}) {
-  const server = new McpServer({ name: 'chatgpt-phone-calls', version: '0.1.0' }, { instructions });
+export function createMcp(request = localRequest, { telegramMessaging = false, Server = McpServer } = {}) {
+  const server = new Server({ name: 'chatgpt-phone-calls', version: '0.1.0' }, { instructions });
   const tool = (name, description, annotations, inputSchema, run) => {
     server.registerTool(name, { description, annotations, inputSchema }, async args => {
       try {
