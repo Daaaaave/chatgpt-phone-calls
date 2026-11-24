@@ -1,6 +1,6 @@
 # ChatGPT Phone Calls
 
-**Self-hosted AI phone and Telegram calls from ChatGPT or another MCP client.** Follow the live transcript and steer the conversation from the same chat. GPT-Live handles the conversation; the chat steps in when a decision or a missing fact requires it.
+**Self-hosted AI phone and Telegram calls from ChatGPT or another MCP client.** [OpenAI GPT-Live 1.1](https://developers.openai.com/api/docs/models/gpt-live-1.1) (`gpt-live-1.1`) is the voice model for both channels. Follow the live transcript and steer the conversation from the same chat when a decision or a missing fact requires it.
 
 | What you want to do | How it works |
 | --- | --- |
@@ -28,7 +28,7 @@ No dependency install, Docker, accounts, or keys are needed for the demo. It sho
 | --- | --- |
 | **Your computer or a VPS** | Run the relay with Docker Compose v2. Your computer works if it stays awake while you call. Use an always-on VPS if you want to call when your computer is off. |
 | **Node.js 24+** | Run the CLI or local MCP client launcher, and build the optional Web adapter. |
-| **An OpenAI API project with GPT-Live access and API funds** | Required for both real call channels. Use paid API credits or [claim and link eligible ChatGPT API credits](https://developers.openai.com/api/docs/guides/chatgpt-api-credits). A ChatGPT login alone is not enough. |
+| **An OpenAI API key with access to GPT-Live 1.1** | Required for both real call channels. [Create a project API key](https://platform.openai.com/api-keys) and make sure its organization has [API credits](https://platform.openai.com/settings/organization/billing/overview). Eligible subscribers can [claim and link ChatGPT API credits](https://developers.openai.com/api/docs/guides/chatgpt-api-credits). A ChatGPT login alone is not enough. |
 | **A SIP provider, such as Twilio Elastic SIP Trunking** | Required **only** for ordinary phone numbers. Use SIP credentials and a verified outgoing caller ID; another provider must support the same outbound SIP setup. |
 | **A Telegram account, API ID and API hash** | Required **only** for Telegram. Sign in via QR. A BotFather token is not a substitute; Twilio is not needed. |
 | **A ChatGPT account with access to Sites and MCP plugins** | Required if you want to control calls from **ChatGPT Web** using your own private Site. Not required for the command-line dialer or a different compatible MCP client. |
@@ -37,7 +37,7 @@ No dependency install, Docker, accounts, or keys are needed for the demo. It sho
 
 Start in the checkout from the demo above, then:
 
-1. Follow [local configuration](SETUP.md#1-configure-the-relay) to set your OpenAI API key and generate a relay token.
+1. Follow [local configuration](SETUP.md#1-configure-the-relay) to create `.env` from `.env.example`. Set `OPENAI_API_KEY` in `.env` to your project key and generate a relay token. Keep the key out of chat and Git.
 2. Choose [ordinary phone calls](SETUP.md#2a-set-up-ordinary-phone-calls), [Telegram voice calls](SETUP.md#2b-set-up-telegram-voice-calls), or both. [Telegram messaging](SETUP.md#optional-telegram-messages) is separate and optional.
 3. Check status and make [one authorized test call from the CLI](SETUP.md#3-check-status-and-make-a-test-call).
 4. Connect [Codex or another local MCP client](SETUP.md#4-connect-your-agent), or follow the separate [ChatGPT Web setup](docs/chatgpt-web.md).
