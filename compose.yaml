@@ -1,0 +1,36 @@
+services:
+  relay:
+    build: .
+    ports:
+      - "127.0.0.1:47831:8080"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RINGER_CLOUD_TOKEN: ${RINGER_CLOUD_TOKEN:-}
+      RINGER_SIP_URL: ${RINGER_SIP_URL:-}
+      RINGER_SIP_USERNAME: ${RINGER_SIP_USERNAME:-}
+      RINGER_SIP_PASSWORD: ${RINGER_SIP_PASSWORD:-}
+      RINGER_CALLER_NUMBER: ${RINGER_CALLER_NUMBER:-}
+      RINGER_ALTERNATE_CALLER_NUMBER: ${RINGER_ALTERNATE_CALLER_NUMBER:-}
+      RINGER_ALLOWED_DIAL_PREFIXES: ${RINGER_ALLOWED_DIAL_PREFIXES:-}
+      RINGER_TELEGRAM_ORIGIN: http://telegram:8090
+      RINGER_TELEGRAM_TOKEN: ${RINGER_TELEGRAM_TOKEN:-}
+      RINGER_TELEGRAM_CALLS: ${RINGER_TELEGRAM_CALLS:-0}
+      RINGER_TELEGRAM_MESSAGING: ${RINGER_TELEGRAM_MESSAGING:-0}
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  telegram:
+    profiles: [telegram]
+    build: ./telegram
+    environment:
+      RINGER_TELEGRAM_TOKEN: ${RINGER_TELEGRAM_TOKEN:-}
+      RINGER_TELEGRAM_CALLS: ${RINGER_TELEGRAM_CALLS:-0}
+      RINGER_TELEGRAM_MESSAGING: ${RINGER_TELEGRAM_MESSAGING:-0}
+    volumes:
+      - telegram-state:/state
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  telegram-state:

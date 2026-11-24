@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.context/
+dist/
+__pycache__/
+*.session*
+.openai/hosting.json
+*.pem
+*.key
+*.envrc
+*.log
+*.wav
+*.pcap
+*.tgz
