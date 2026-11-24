@@ -48,7 +48,9 @@ Or give a coding agent this prompt:
 
 ## How to make phone calls with ChatGPT
 
-Start with the local CLI or stdio MCP in a compatible coding agent. For ChatGPT web, use the [private ChatGPT Sites adapter](docs/chatgpt-web.md) with your own deployment and account, where Sites MCP plugins are available. Type `@` and select your plugin by its display name, such as `Call`. This repository does not include a shared public plugin or hosted call service.
+**Cloning this repo does not add `@Call` to ChatGPT.** The repo includes the relay, a local CLI and stdio MCP server, and a buildable [ChatGPT Sites adapter](docs/chatgpt-web.md). It does not include a shared public plugin or a hosted call service.
+
+To get your own `@Call` in ChatGPT Web, run the relay, publish the adapter on an owner-only Site you control, and install and connect that Site's plugin. Name the plugin `Call` and select it from the `@` menu. This requires Sites and MCP plugin creation access. Without Sites, use the CLI or [local MCP setup](SETUP.md#4-connect-your-agent).
 
 ## How to make real Telegram calls with an AI agent
 

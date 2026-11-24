@@ -57,10 +57,16 @@ export function createSiteWorker(relayFetch) {
           headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
         });
       }
-      if (pathname !== '/mcp') return new Response('Not found.', { status: 404 });
       // Sites supplies this identity. Do not deploy this worker outside the trusted Sites gateway.
       const ownerId = callerSetting(env, 'CALLER_SITE_OWNER_ID');
-      const requestRelay = ownerId && request.headers.get('oai-authenticated-user-id') === ownerId
+      const viewerId = request.headers.get('oai-authenticated-user-id');
+      if (pathname === '/setup' && request.method === 'GET' && !ownerId) {
+        const headers = { 'Cache-Control': 'no-store' };
+        if (!viewerId) return new Response('Sign in to this private Site first.', { status: 401, headers });
+        return Response.json({ CALLER_SITE_OWNER_ID: viewerId }, { headers });
+      }
+      if (pathname !== '/mcp') return new Response('Not found.', { status: 404 });
+      const requestRelay = ownerId && viewerId === ownerId
         ? createRelayRequest(env, relayFetch)
         : () => { throw new Error('Connect the plugin with the configured Site owner account.'); };
       const options = { telegramMessaging: callerSetting(env, 'CALLER_TELEGRAM_MESSAGING') === '1' };

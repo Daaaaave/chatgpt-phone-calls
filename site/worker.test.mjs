@@ -54,6 +54,22 @@ test('modern Sites clients can discover the server and list the same tools', asy
   assert.deepEqual(modern.tools.map(tool => tool.name), legacy.tools.map(tool => tool.name));
 });
 
+test('private Site setup shows the signed-in ID without enabling calls', async () => {
+  const worker = createSiteWorker(() => assert.fail('Setup must not use the relay'));
+  const request = (signedIn, method = 'GET') => new Request('https://site.example/setup', {
+    method, headers: signedIn ? { 'oai-authenticated-user-id': 'owner-fixture' } : {},
+  });
+  assert.equal((await worker.fetch(request(false), {})).status, 401);
+  assert.equal((await worker.fetch(request(true, 'POST'), {})).status, 404);
+  const result = await worker.fetch(request(true), {});
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(await result.json(), { CALLER_SITE_OWNER_ID: 'owner-fixture' });
+  assert.equal((await rpc(worker, {}, 'owner-fixture', 'tools/call', { name: 'caller_status' }, true)).isError, true);
+  assert.equal((await worker.fetch(request(true), { CALLER_SITE_OWNER_ID: 'owner-fixture' })).status, 404);
+  assert.equal((await worker.fetch(request(true), { RINGER_SITE_OWNER_ID: 'owner-fixture' })).status, 404);
+});
+
 test('both local and hosted MCP opt into the scoped messaging surface', async () => {
   const worker = createSiteWorker(() => assert.fail('Discovery must not consult the relay'));
   const disabled = await rpc(worker, {}, null, 'tools/list', {});
