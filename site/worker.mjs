@@ -1,17 +1,20 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { createMcpHandler, isLegacyRequest, McpServer } from '@modelcontextprotocol/server';
 import { createMcp } from '../mcp.mjs';
+import { callerSetting } from '../settings.mjs';
 
 const maxRequestBodySize = 16_384;
 
 function createRelayRequest(env, relayFetch = fetch) {
+  const relayOrigin = callerSetting(env, 'CALLER_CLOUD_ORIGIN');
+  const relayToken = callerSetting(env, 'CALLER_CLOUD_TOKEN');
   return async (path, body) => {
-    if (!env.RINGER_CLOUD_ORIGIN || !env.RINGER_CLOUD_TOKEN) {
+    if (!relayOrigin || !relayToken) {
       if (path === '/status') return { ready: false, reason: 'The cloud voice service is not connected.' };
       throw new Error('The cloud voice service is not connected.');
     }
-    const origin = new URL(env.RINGER_CLOUD_ORIGIN);
-    if (origin.protocol !== 'https:' || origin.origin !== env.RINGER_CLOUD_ORIGIN) {
+    const origin = new URL(relayOrigin);
+    if (origin.protocol !== 'https:' || origin.origin !== relayOrigin) {
       throw new Error('Invalid cloud voice service configuration.');
     }
     if (path === '/calls' && body?.requestId) {
@@ -27,7 +30,7 @@ function createRelayRequest(env, relayFetch = fetch) {
     try {
       const response = await relayFetch(origin.origin + path, {
         method: body === undefined ? 'GET' : 'POST',
-        headers: { Authorization: `Bearer ${env.RINGER_CLOUD_TOKEN}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${relayToken}`, 'Content-Type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
         redirect: 'manual',
         signal: AbortSignal.timeout(path === '/calls' ? 23_000 : path.includes('&wait_ms=') ? 15_000 : 9_000),
@@ -56,10 +59,11 @@ export function createSiteWorker(relayFetch) {
       }
       if (pathname !== '/mcp') return new Response('Not found.', { status: 404 });
       // Sites supplies this identity. Do not deploy this worker outside the trusted Sites gateway.
-      const requestRelay = env.RINGER_SITE_OWNER_ID && request.headers.get('oai-authenticated-user-id') === env.RINGER_SITE_OWNER_ID
+      const ownerId = callerSetting(env, 'CALLER_SITE_OWNER_ID');
+      const requestRelay = ownerId && request.headers.get('oai-authenticated-user-id') === ownerId
         ? createRelayRequest(env, relayFetch)
         : () => { throw new Error('Connect the plugin with the configured Site owner account.'); };
-      const options = { telegramMessaging: env.RINGER_TELEGRAM_MESSAGING === '1' };
+      const options = { telegramMessaging: callerSetting(env, 'CALLER_TELEGRAM_MESSAGING') === '1' };
       if (await isLegacyRequest(request, undefined, { maxRequestBodySize })) {
         const server = createMcp(requestRelay, options);
         const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true, maxRequestBodySize });

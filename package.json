@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
-    "start": "node --env-file-if-exists=.env ringer.mjs serve",
+    "start": "node --env-file-if-exists=.env caller.mjs serve",
     "test": "node --test",
     "demo": "node demo.mjs",
     "build:site": "node site/build.mjs"

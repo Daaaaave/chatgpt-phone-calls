@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { LiveCall, LiveConversation, loadConfig, withCallerId } from './live.mjs';
-import { createRinger } from './ringer.mjs';
+import { createCaller } from './caller.mjs';
 
 const config = {
   apiKey: 'test-key',
@@ -18,23 +18,37 @@ test('Telegram-only configuration does not need SIP credentials', () => {
   const telegramOnly = loadConfig({ OPENAI_API_KEY: 'test-key' });
   assert.equal(telegramOnly.trunk, undefined);
   assert.throws(() => withCallerId(telegramOnly), /Telephone calls are not configured/);
-  assert.throws(() => loadConfig({ OPENAI_API_KEY: 'test-key', RINGER_CALLER_NUMBER: '+17545550100' }),
+  assert.throws(() => loadConfig({ OPENAI_API_KEY: 'test-key', CALLER_NUMBER: '+17545550100' }),
     /Missing settings/);
 });
 
 test('telephone setup requires explicit prefixes and deduplicates them', () => {
   const env = {
+    OPENAI_API_KEY: 'test-key', CALLER_SIP_URL: 'sips:sip.example.com:5061',
+    CALLER_SIP_USERNAME: 'test-user', CALLER_SIP_PASSWORD: 'test-password',
+    CALLER_NUMBER: '+447700900100',
+  };
+  assert.throws(() => loadConfig(env), /CALLER_ALLOWED_DIAL_PREFIXES/);
+  assert.throws(() => loadConfig({ ...env, CALLER_ALLOWED_DIAL_PREFIXES: '+44,*' }), /CALLER_ALLOWED_DIAL_PREFIXES/);
+  assert.deepEqual(loadConfig({ ...env, CALLER_ALLOWED_DIAL_PREFIXES: '+44, +1, +44' }).dialPrefixes, ['+44', '+1']);
+});
+
+test('legacy SIP settings work and explicit Caller settings take precedence', () => {
+  const env = {
     OPENAI_API_KEY: 'test-key', RINGER_SIP_URL: 'sips:sip.example.com:5061',
     RINGER_SIP_USERNAME: 'test-user', RINGER_SIP_PASSWORD: 'test-password',
-    RINGER_CALLER_NUMBER: '+447700900100',
+    RINGER_CALLER_NUMBER: '+447700900100', RINGER_ALTERNATE_CALLER_NUMBER: '+447700900101',
+    RINGER_ALLOWED_DIAL_PREFIXES: '+44',
   };
-  assert.throws(() => loadConfig(env), /RINGER_ALLOWED_DIAL_PREFIXES/);
-  assert.throws(() => loadConfig({ ...env, RINGER_ALLOWED_DIAL_PREFIXES: '+44,*' }), /RINGER_ALLOWED_DIAL_PREFIXES/);
-  assert.deepEqual(loadConfig({ ...env, RINGER_ALLOWED_DIAL_PREFIXES: '+44, +1, +44' }).dialPrefixes, ['+44', '+1']);
+  assert.equal(loadConfig(env).trunk.caller_number, env.RINGER_CALLER_NUMBER);
+  const config = loadConfig({ ...env, CALLER_NUMBER: '+447700900102', CALLER_ALTERNATE_NUMBER: '' });
+  assert.equal(config.trunk.caller_number, '+447700900102');
+  assert.equal(config.alternateCallerNumber, '');
+  assert.deepEqual(config.dialPrefixes, ['+44']);
 });
 
 test('the release relay blocks Telegram messaging even for authenticated clients', async t => {
-  const { server, stop } = createRinger(config, {}, {
+  const { server, stop } = createCaller(config, {}, {
     cloudToken: 'test-token',
     telegram: () => assert.fail('Messaging request forwarded to Telegram'),
   });
@@ -100,7 +114,7 @@ function fakeProvider() {
 
 test('call flow allows the chat to react to phone speech and delegation', async t => {
   const provider = fakeProvider();
-  const { server, stop } = createRinger(config, provider.options);
+  const { server, stop } = createCaller(config, provider.options);
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(stop);
@@ -201,7 +215,7 @@ test('aborted listeners are removed and call completion releases important waits
 test('a +1 toll-free call can select the alternate caller ID without changing the default', async t => {
   const provider = fakeProvider();
   const alternateCallerNumber = '+17545550100';
-  const { server, stop } = createRinger({ ...config, alternateCallerNumber }, provider.options);
+  const { server, stop } = createCaller({ ...config, alternateCallerNumber }, provider.options);
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(stop);
@@ -230,7 +244,7 @@ test('a +1 toll-free call can select the alternate caller ID without changing th
 
 test('a repeated plugin request does not dial twice', async t => {
   const provider = fakeProvider();
-  const { server, stop } = createRinger(config, provider.options);
+  const { server, stop } = createCaller(config, provider.options);
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(stop);
@@ -315,7 +329,7 @@ test('a spoken keypad menu is surfaced without pressing a key', async () => {
 
 test('the cloud relay requires its service credential before reading or dialing', async t => {
   const provider = fakeProvider();
-  const { server, stop } = createRinger(config, provider.options, { cloudToken: 'test-token' });
+  const { server, stop } = createCaller(config, provider.options, { cloudToken: 'test-token' });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(stop);

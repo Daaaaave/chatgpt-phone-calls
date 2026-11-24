@@ -120,7 +120,7 @@ async def process(account, op, body):
     if not isinstance(peer_id, str) or (peer_id != "self" and not re.fullmatch(r"-?[0-9]{1,20}", peer_id)):
         raise ValueError("Use a peer ID from the chat list.")
     if peer_id != "self" and peer_id not in peers:
-        raise ValueError("This peer is not approved for access through Ringer.")
+        raise ValueError("This peer is not approved for access through Caller.")
     peer = await account.get_input_entity("me" if peer_id == "self" else int(peer_id))
     if op == "read":
         limit = body.get("limit", 10)
@@ -155,11 +155,11 @@ async def process(account, op, body):
 
 
 async def serve():
-    token = os.environ["RINGER_TELEGRAM_TOKEN"]
+    token = os.environ.get("CALLER_TELEGRAM_TOKEN", os.environ.get("RINGER_TELEGRAM_TOKEN", ""))
     if not re.fullmatch("[a-f0-9]{64}", token):
         raise ValueError("Invalid Telegram service token.")
-    use_calls = os.environ.get("RINGER_TELEGRAM_CALLS") == "1"
-    messaging = os.environ.get("RINGER_TELEGRAM_MESSAGING") == "1"
+    use_calls = os.environ.get("CALLER_TELEGRAM_CALLS", os.environ.get("RINGER_TELEGRAM_CALLS")) == "1"
+    messaging = os.environ.get("CALLER_TELEGRAM_MESSAGING", os.environ.get("RINGER_TELEGRAM_MESSAGING")) == "1"
     account = client(receive_updates=use_calls) if APP.exists() and (STATE / "account.session").exists() else None
     calls = None
     if account:

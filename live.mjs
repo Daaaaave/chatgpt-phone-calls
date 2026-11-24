@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { destinationFormat, destinationNumber } from './dialing.mjs';
+import { callerSetting } from './settings.mjs';
 
 const liveUrl = 'https://api.openai.com/v1/live/sessions';
 const terminalStates = new Set(['ended', 'failed', 'unconfirmed']);
@@ -78,34 +79,36 @@ export class HandoffWatch {
 
 export function loadConfig(env) {
   if (!env.OPENAI_API_KEY?.trim()) throw new Error('Missing setting: OPENAI_API_KEY.');
-  const names = ['RINGER_SIP_URL', 'RINGER_SIP_USERNAME', 'RINGER_SIP_PASSWORD', 'RINGER_CALLER_NUMBER'];
-  if (!names.some(name => env[name]?.trim()) && !env.RINGER_ALTERNATE_CALLER_NUMBER?.trim()) {
+  const names = ['CALLER_SIP_URL', 'CALLER_SIP_USERNAME', 'CALLER_SIP_PASSWORD', 'CALLER_NUMBER'];
+  const values = names.map(name => callerSetting(env, name));
+  const [providerUrl, username, password, callerNumber] = values;
+  const alternateCallerNumber = callerSetting(env, 'CALLER_ALTERNATE_NUMBER')?.trim();
+  if (!values.some(value => value?.trim()) && !alternateCallerNumber) {
     return { apiKey: env.OPENAI_API_KEY };
   }
-  const missing = names.filter(name => !env[name]?.trim());
+  const missing = names.filter((name, index) => !values[index]?.trim());
   if (missing.length) throw new Error(`Missing settings: ${missing.join(', ')}`);
-  if (!/^sips:[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d{1,5})?$/i.test(env.RINGER_SIP_URL)) {
-    throw new Error('RINGER_SIP_URL must be a public sips: hostname, optionally with a port.');
+  if (!/^sips:[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d{1,5})?$/i.test(providerUrl)) {
+    throw new Error('CALLER_SIP_URL must be a public sips: hostname, optionally with a port.');
   }
-  if (!/^\+[1-9]\d{6,14}$/.test(env.RINGER_CALLER_NUMBER)) {
-    throw new Error('RINGER_CALLER_NUMBER must be in E.164 format.');
+  if (!/^\+[1-9]\d{6,14}$/.test(callerNumber)) {
+    throw new Error('CALLER_NUMBER must be in E.164 format.');
   }
-  const alternateCallerNumber = env.RINGER_ALTERNATE_CALLER_NUMBER?.trim();
   if (alternateCallerNumber && !destinationNumber.test(alternateCallerNumber)) {
-    throw new Error('RINGER_ALTERNATE_CALLER_NUMBER must be in E.164 format.');
+    throw new Error('CALLER_ALTERNATE_NUMBER must be in E.164 format.');
   }
-  const dialPrefixes = [...new Set((env.RINGER_ALLOWED_DIAL_PREFIXES ?? '').split(',').map(prefix => prefix.trim()))];
+  const dialPrefixes = [...new Set((callerSetting(env, 'CALLER_ALLOWED_DIAL_PREFIXES') ?? '').split(',').map(prefix => prefix.trim()))];
   if (dialPrefixes.some(prefix => !/^\+[1-9]\d{0,7}$/.test(prefix))) {
-    throw new Error('Set RINGER_ALLOWED_DIAL_PREFIXES to a comma-separated list of international prefixes.');
+    throw new Error('Set CALLER_ALLOWED_DIAL_PREFIXES to a comma-separated list of international prefixes.');
   }
   return {
     apiKey: env.OPENAI_API_KEY,
     alternateCallerNumber,
     dialPrefixes,
     trunk: {
-      provider_url: env.RINGER_SIP_URL,
-      caller_number: env.RINGER_CALLER_NUMBER,
-      auth: { type: 'digest', username: env.RINGER_SIP_USERNAME, password: env.RINGER_SIP_PASSWORD },
+      provider_url: providerUrl,
+      caller_number: callerNumber,
+      auth: { type: 'digest', username, password },
     },
   };
 }

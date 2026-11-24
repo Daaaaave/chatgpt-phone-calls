@@ -56,7 +56,7 @@ Follow [Telegram setup](SETUP.md#2b-set-up-telegram-voice-calls), then ask the s
 
 ## FAQ
 
-**Can it call internationally?** Enter approved prefixes in `RINGER_ALLOWED_DIAL_PREFIXES` and use E.164 numbers. Your SIP provider, account, verified caller ID, and dialing permissions still decide which destinations are reachable.
+**Can it call internationally?** Enter approved prefixes in `CALLER_ALLOWED_DIAL_PREFIXES` and use E.164 numbers. Your SIP provider, account, verified caller ID, and dialing permissions still decide which destinations are reachable.
 
 **What does it cost?** The source is MIT-licensed. Live calls can incur OpenAI and SIP-provider charges billed to your own accounts.
 

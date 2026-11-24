@@ -1,5 +1,7 @@
+import { callerSetting } from './settings.mjs';
+
 export async function requestRelay(path, body) {
-  const token = process.env.RINGER_CLOUD_TOKEN?.trim();
+  const token = callerSetting(process.env, 'CALLER_CLOUD_TOKEN')?.trim();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';

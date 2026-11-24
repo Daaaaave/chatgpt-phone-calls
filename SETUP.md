@@ -35,9 +35,11 @@ test -e .env || (umask 077; cp .env.example .env)
 chmod 600 .env
 ```
 
-Edit `.env` locally. Set `OPENAI_API_KEY`. Generate a 64-character hex `RINGER_CLOUD_TOKEN` with `openssl rand -hex 32`. If using Telegram, run the command again and use the different value for `RINGER_TELEGRAM_TOKEN`. The relay token is for CLI/MCP access; the second token stays between the relay and the Telegram container.
+Edit `.env` locally. Set `OPENAI_API_KEY`. Generate a 64-character hex `CALLER_CLOUD_TOKEN` with `openssl rand -hex 32`. If using Telegram, run the command again and use the different value for `CALLER_TELEGRAM_TOKEN`. The relay token is for CLI/MCP access; the second token stays between the relay and the Telegram container.
 
 The Compose file binds the relay to `127.0.0.1:47831` on the host. Keep that port private. Only the optional Web setup uses an authenticated HTTPS route. If the port is occupied, stop the conflicting service or use a separate host.
+
+Upgrading an existing installation? The old `RINGER_*` settings and `ringer.mjs` still work. Use the `CALLER_*` settings shown here for new configuration; when both are set, the new names take precedence. The legacy MCP tool `ringer_status` remains an alias for `caller_status`.
 
 ## 2a. Set up ordinary phone calls
 
@@ -50,11 +52,11 @@ Use [Twilio Elastic SIP Trunking](https://www.twilio.com/docs/sip-trunking/confi
 
 | In `.env` | Set to |
 | --- | --- |
-| `RINGER_SIP_URL` | The provider's public TLS termination URI, such as `sips:YOUR-TRUNK.pstn.twilio.com:5061`. |
-| `RINGER_SIP_USERNAME`, `RINGER_SIP_PASSWORD` | The attached SIP Credential List credentials. |
-| `RINGER_CALLER_NUMBER` | The default verified outgoing Caller ID, with the leading `+` and country code. |
-| `RINGER_ALLOWED_DIAL_PREFIXES` | A comma-separated list of destinations your installation may dial, such as `+44` or `+1,+44`. |
-| `RINGER_ALTERNATE_CALLER_NUMBER` | Optional second verified Caller ID. Select it with `caller_id: "alternate"` in MCP. It does not change the destination allowlist. |
+| `CALLER_SIP_URL` | The provider's public TLS termination URI, such as `sips:YOUR-TRUNK.pstn.twilio.com:5061`. |
+| `CALLER_SIP_USERNAME`, `CALLER_SIP_PASSWORD` | The attached SIP Credential List credentials. |
+| `CALLER_NUMBER` | The default verified outgoing Caller ID, with the leading `+` and country code. |
+| `CALLER_ALLOWED_DIAL_PREFIXES` | A comma-separated list of destinations your installation may dial, such as `+44` or `+1,+44`. |
+| `CALLER_ALTERNATE_NUMBER` | Optional second verified Caller ID. Select it with `caller_id: "alternate"` in MCP. It does not change the destination allowlist. |
 
 For a phone-only install, start the relay:
 
@@ -64,7 +66,7 @@ docker compose up -d --build --wait relay
 
 ## 2b. Set up Telegram voice calls
 
-1. Set `RINGER_TELEGRAM_CALLS=1` and the separate `RINGER_TELEGRAM_TOKEN` in `.env`. Leave SIP fields blank for Telegram-only use.
+1. Set `CALLER_TELEGRAM_CALLS=1` and the separate `CALLER_TELEGRAM_TOKEN` in `.env`. Leave SIP fields blank for Telegram-only use.
 2. Sign in at [my.telegram.org](https://my.telegram.org/), open **API development tools**, and obtain your API ID and API hash. [Official Telegram instructions](https://core.telegram.org/api/obtaining_api_id).
 3. Start QR login on the host. Stop any running Telegram container first so two processes don't share the same session database:
 
@@ -85,7 +87,7 @@ The session stays in the Compose volume. Revoke it in Telegram's Devices setting
 
 ### Optional Telegram messages
 
-Set `RINGER_TELEGRAM_MESSAGING=1` in `.env` and in the MCP environment (`.env.mcp` or private Site settings). Leave `RINGER_TELEGRAM_CALLS=0` for a messaging-only Telegram installation. Only Saved Messages and individually approved chats are available. For a chat you are authorized to share with the AI, stop the sidecar and approve it by Telegram username:
+Set `CALLER_TELEGRAM_MESSAGING=1` in `.env` and in the MCP environment (`.env.mcp` or private Site settings). Leave `CALLER_TELEGRAM_CALLS=0` for a messaging-only Telegram installation. Only Saved Messages and individually approved chats are available. For a chat you are authorized to share with the AI, stop the sidecar and approve it by Telegram username:
 
 ```sh
 docker compose --profile telegram stop telegram
@@ -100,9 +102,9 @@ Reconnect the MCP client and call `telegram_peers` to see approved peer IDs. To 
 On the relay host, run:
 
 ```sh
-node --env-file=.env ringer.mjs status
+node --env-file=.env caller.mjs status
 # If you enabled Telegram:
-node --env-file=.env ringer.mjs telegram-status
+node --env-file=.env caller.mjs telegram-status
 ```
 
 For phone calls, check that `busy` is false and that your expected `caller_ids` and `dial_prefixes` are present. This confirms the relay configuration, not carrier reachability. For Telegram voice, wait for `connected: true` and `native_calls: true`; startup can take a few seconds.
@@ -112,19 +114,19 @@ Use an explicitly authorized test destination. Replace the placeholder; do not d
 For an ordinary phone number:
 
 ```sh
-node --env-file=.env ringer.mjs call E164_TEST_NUMBER "Say this is an AI test call and ask whether the recipient can hear you."
+node --env-file=.env caller.mjs call E164_TEST_NUMBER "Say this is an AI test call and ask whether the recipient can hear you."
 ```
 
 For Telegram:
 
 ```sh
-node --env-file=.env ringer.mjs telegram-call @YOUR_TEST_CONTACT "Say this is an AI test call and ask whether the recipient can hear you."
+node --env-file=.env caller.mjs telegram-call @YOUR_TEST_CONTACT "Say this is an AI test call and ask whether the recipient can hear you."
 ```
 
 Follow the returned call ID. The watch command waits up to 12 seconds; keep watching with the latest returned cursor while the call is active.
 
 ```sh
-node --env-file=.env ringer.mjs watch CALL_ID 0 important
+node --env-file=.env caller.mjs watch CALL_ID 0 important
 ```
 
 ## 4. Connect your agent
@@ -139,7 +141,7 @@ test -e .env.mcp || (umask 077; touch .env.mcp)
 chmod 600 .env.mcp
 ```
 
-Open `.env.mcp` in a local editor and add a line in the form `RINGER_CLOUD_TOKEN=YOUR_RELAY_TOKEN`, replacing the placeholder with the actual relay token. Add `RINGER_TELEGRAM_MESSAGING=1` only if you enabled that optional feature. Do not copy the OpenAI key, SIP password, Telegram token, or session into this file.
+Open `.env.mcp` in a local editor and add a line in the form `CALLER_CLOUD_TOKEN=YOUR_RELAY_TOKEN`, replacing the placeholder with the actual relay token. Add `CALLER_TELEGRAM_MESSAGING=1` only if you enabled that optional feature. Do not copy the OpenAI key, SIP password, Telegram token, or session into this file.
 
 For a VPS, run this on the client and keep it open; replace `user@your-server` with your SSH destination:
 
@@ -154,7 +156,7 @@ codex mcp add chatgpt-phone-calls -- "$(command -v node)" --env-file="$PWD/.env.
 codex mcp list
 ```
 
-Other stdio clients use the same executable and arguments. Restart or reconnect the client if needed. Ask it to run `ringer_status` first. Then tell the **same chat** to place and supervise one authorized call. To change direction mid-call, say something like “Friday doesn't work. Ask them about Monday instead.”
+Other stdio clients use the same executable and arguments. Restart or reconnect the client if needed. Ask it to run `caller_status` first. Then tell the **same chat** to place and supervise one authorized call. To change direction mid-call, say something like “Friday doesn't work. Ask them about Monday instead.”
 
 ## 5. Stop or restart
 
@@ -166,6 +168,6 @@ Other stdio clients use the same executable and arguments. Restart or reconnect 
 | --- | --- |
 | Relay won't start | Run `docker compose logs relay`. Verify the OpenAI key and relay token are set, and that a phone configuration has all SIP fields plus at least one prefix. |
 | Telephone call rejected | Check the destination format and allowlist, billing, verified caller ID, SIP termination settings and carrier Geo Permissions. |
-| Telegram not connected or calls unavailable | Complete QR sign-in, check `RINGER_TELEGRAM_CALLS=1`, apply the `.env` changes as above, and check `docker compose --profile telegram logs telegram`. |
+| Telegram not connected or calls unavailable | Complete QR sign-in, check `CALLER_TELEGRAM_CALLS=1`, apply the `.env` changes as above, and check `docker compose --profile telegram logs telegram`. |
 | MCP tools missing | Use an absolute path to the stdio script, run `npm ci`, and reconnect the MCP client after changing the tools. |
 | Call outcome is unconfirmed | Check the existing call ID and provider or Telegram before retrying. Never start a new call solely because a request timed out. |

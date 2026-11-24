@@ -32,14 +32,16 @@ test('only the configured Site owner can reach the authenticated relay', async (
     assert.equal(options.headers.Authorization, 'Bearer fixture-token');
     return Response.json({ busy: false });
   });
-  const env = { RINGER_SITE_OWNER_ID: 'owner-fixture', RINGER_CLOUD_ORIGIN: 'https://relay.example', RINGER_CLOUD_TOKEN: 'fixture-token' };
+  const env = { CALLER_SITE_OWNER_ID: 'owner-fixture', CALLER_CLOUD_ORIGIN: 'https://relay.example', CALLER_CLOUD_TOKEN: 'fixture-token' };
   for (const modern of [false, true]) {
     for (const id of [undefined, 'visitor-fixture']) {
-      assert.equal((await rpc(worker, env, id, 'tools/call', { name: 'ringer_status' }, modern)).isError, true);
+      assert.equal((await rpc(worker, env, id, 'tools/call', { name: 'caller_status' }, modern)).isError, true);
     }
-    assert.equal((await rpc(worker, env, 'owner-fixture', 'tools/call', { name: 'ringer_status' }, modern)).isError, false);
+    assert.equal((await rpc(worker, env, 'owner-fixture', 'tools/call', { name: 'caller_status' }, modern)).isError, false);
+    const legacyEnv = { RINGER_SITE_OWNER_ID: 'owner-fixture', RINGER_CLOUD_ORIGIN: 'https://relay.example', RINGER_CLOUD_TOKEN: 'fixture-token' };
+    assert.equal((await rpc(worker, legacyEnv, 'owner-fixture', 'tools/call', { name: 'ringer_status' }, modern)).isError, false);
   }
-  assert.equal(calls, 2);
+  assert.equal(calls, 4);
 });
 
 test('modern Sites clients can discover the server and list the same tools', async () => {
@@ -55,7 +57,7 @@ test('modern Sites clients can discover the server and list the same tools', asy
 test('both local and hosted MCP opt into the scoped messaging surface', async () => {
   const worker = createSiteWorker(() => assert.fail('Discovery must not consult the relay'));
   const disabled = await rpc(worker, {}, null, 'tools/list', {});
-  const enabled = await rpc(worker, { RINGER_TELEGRAM_MESSAGING: '1' }, null, 'tools/list', {});
+  const enabled = await rpc(worker, { CALLER_TELEGRAM_MESSAGING: '1' }, null, 'tools/list', {});
   assert.ok(!disabled.tools.some(tool => tool.name === 'telegram_send'));
   assert.ok(enabled.tools.some(tool => tool.name === 'telegram_read'));
   assert.ok(enabled.tools.some(tool => tool.name === 'telegram_send'));

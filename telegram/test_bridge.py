@@ -9,7 +9,7 @@ from bridge import process, serve
 
 class BridgeTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_only_does_not_publish_messaging_routes(self):
-        with patch.dict(os.environ, {"RINGER_TELEGRAM_TOKEN": "a" * 64, "RINGER_TELEGRAM_MESSAGING": "0"}):
+        with patch.dict(os.environ, {"CALLER_TELEGRAM_TOKEN": "a" * 64, "CALLER_TELEGRAM_MESSAGING": "0"}):
             app = await serve()
         async with TestClient(TestServer(app)) as client:
             self.assertEqual((await client.post("/status", json={})).status, 401)

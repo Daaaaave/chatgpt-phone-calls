@@ -1,9 +1,11 @@
 **
 !Dockerfile
+!caller.mjs
 !cloud.mjs
 !dialing.mjs
 !live.mjs
 !package.json
 !relay-client.mjs
 !ringer.mjs
+!settings.mjs
 !telegram-call.mjs
