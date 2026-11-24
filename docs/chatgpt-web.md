@@ -2,6 +2,22 @@
 
 `@Call` is the display name you give **your own private plugin**, not a preinstalled ChatGPT feature or a plugin shared by this repository. The included Worker forwards MCP requests to your [self-hosted relay](../SETUP.md). The relay stays on your computer or VPS and runs the calls.
 
+## Let an agent set it up
+
+If you're starting from scratch, use the [README prompt](../README.md#let-an-agent-set-it-up) and choose **ChatGPT Web with my own @Call**. If your relay is already running, paste this into a coding agent with the Sites tools:
+
+```text
+My relay is already running. Read docs/chatgpt-web.md in
+https://github.com/Daaaaave/chatgpt-phone-calls and set up my own @Call.
+Confirm I have Sites and MCP plugin creation access. Build the adapter using
+my Site's project ID and publish it privately, for my account only.
+Walk me through /setup and entering the Site settings without sharing secrets
+in chat. Help me install and name the plugin Call, then check caller_status
+from a new ChatGPT conversation. Do not place a call.
+```
+
+Without Sites access, a coding agent can still connect the local MCP server. It can't add a plugin to ChatGPT Web in that mode.
+
 ## Before you start
 
 - Sign in to a ChatGPT account with **Sites access and permission to publish MCP plugins**. A local Codex MCP entry will not appear in ChatGPT Web. If your account or workspace does not allow this path, use [local MCP](../SETUP.md#4-connect-your-agent).
@@ -21,9 +37,7 @@ npm ci
 SITE_PROJECT_ID=YOUR_PRIVATE_PROJECT_ID npm run build:site
 ```
 
-This builds `dist/server/index.js` and generates `dist/.openai/hosting.json` with MCP enabled and a D1 binding named `DB` for call deduplication. Use that manifest as the source `.openai/hosting.json` in your private Site checkout, and publish the built Worker through Sites. If a Codex session has the Sites tools, you can give it this prompt:
-
-> Create an owner-only ChatGPT Site named Call and publish the Worker from this checkout using the Sites workflow. Read docs/chatgpt-web.md, use the Site's own project ID to build it, and keep the Site private. Stop after the first private deployment so I can enter the runtime secrets. Do not place a call.
+This builds the Worker at `dist/server/index.js` and generates `dist/.openai/hosting.json`. The manifest enables MCP and configures the `DB` database binding used to avoid submitting the same call twice. Use that manifest as `.openai/hosting.json` in your private Site checkout, and publish the built Worker through Sites.
 
 The manifest is ignored in this repo. If your Sites workflow requires a committed copy, commit it only to the private Site source repository. Do not commit tokens or Telegram session files.
 
@@ -45,6 +59,6 @@ Apply the settings and republish the private Site if needed for the runtime to p
 2. In the plugin's settings, edit the **App name** to `Call`. Neither the GitHub name nor the Site URL controls the mention.
 3. In a new ChatGPT conversation, type `@`, select **Call**, and ask it to check `caller_status` without dialing. Look for `ready: true`. The status checks relay connectivity, not whether your carrier or Telegram can complete a call.
 
-If `Call` is missing, verify that the private Site was published and the plugin was installed in this account. If status says the owner is not configured, verify your Site-scoped ID and the account used to connect the plugin. Do not remove the owner check to troubleshoot.
+If `Call` is missing, verify that the private Site was published and the plugin was installed in this account. If `/setup` is already closed but status says the owner is not configured, check the account you used to connect the plugin and the Site-scoped ID you entered. Do not remove the owner check to troubleshoot. If the owner is correct but the relay is unreachable, check the HTTPS route and that the Site and relay use the same token.
 
 The public template has local build, MCP, and authorization tests. A fresh end-to-end deployment from this guide on another account has not yet been verified. Without Sites, use [local stdio MCP](../SETUP.md#4-connect-your-agent) or the CLI.

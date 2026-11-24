@@ -2,13 +2,33 @@
 
 **Self-hosted AI phone and Telegram calls from ChatGPT or another MCP client.** [OpenAI GPT-Live 1.1](https://developers.openai.com/api/docs/models/gpt-live-1.1) (`gpt-live-1.1`) is the voice model for both channels. Follow the live transcript and steer the conversation from the same chat when a decision or a missing fact requires it.
 
-| What you want to do | How it works |
-| --- | --- |
-| Make a real AI phone call | Your OpenAI API project and a supported outbound SIP trunk. Destination prefixes are configured per installation. |
-| Make a real Telegram voice call | Your Telegram user account via MTProto and a native audio adapter. This is a private 1:1 call, not a bot voice note. |
-| Read or send Telegram messages from chat | Optional MCP tools for explicitly approved chats. Off by default; no bulk export, edits or deletion. |
-| Control an active call from chat | Live transcript, handoff questions, steering, hangup, and telephone keypad tones. |
-| Try it without accounts or keys | `npm run demo` replays an offline call and a mid-call decision. |
+## Let an agent set it up
+
+Paste this into **Codex or another coding agent with terminal access**. Pick the options you want, or let the agent ask. You do not need to clone the repo first.
+
+```text
+Set up https://github.com/Daaaaave/chatgpt-phone-calls for me.
+
+I want [phone calls / Telegram voice calls / both] from
+[ChatGPT Web with my own @Call / Codex / the terminal].
+Run it on [this computer / a VPS I already have]. Ask only about choices
+I haven't specified.
+
+Clone the current main branch, read SETUP.md, and run the offline demo first.
+Set up only my chosen channels and client. For @Call, follow docs/chatgpt-web.md
+and keep my Site private. If Sites isn't available, tell me and offer local MCP.
+
+Stop when I need to sign in, verify a caller ID, scan a Telegram QR, or enter
+keys directly into a provider, local config file, or private Site settings.
+Generate local relay tokens without printing them. Never ask me to paste a
+credential or login code into chat.
+
+Finish by checking status from my chosen client without dialing. Tell me
+what passed and what's still unverified. Do not place a call until I give
+you the exact destination and ask you to dial it.
+```
+
+The agent can run the install and checks. You still need to sign in to your accounts and complete any provider verification. [Read the setup guide](SETUP.md) if you prefer to follow the commands yourself.
 
 ## Try without keys
 
@@ -33,18 +53,12 @@ No dependency install, Docker, accounts, or keys are needed for the demo. It sho
 | **A Telegram account, API ID and API hash** | Required **only** for Telegram. Sign in via QR. A BotFather token is not a substitute; Twilio is not needed. |
 | **A ChatGPT account with access to Sites and MCP plugins** | Required if you want to control calls from **ChatGPT Web** using your own private Site. Not required for the command-line dialer or a different compatible MCP client. |
 
-## Install
+## Manual setup
 
-Start in the checkout from the demo above, then:
-
-1. Follow [local configuration](SETUP.md#1-configure-the-relay) to create `.env` from `.env.example`. Set `OPENAI_API_KEY` in `.env` to your project key and generate a relay token. Keep the key out of chat and Git.
-2. Choose [ordinary phone calls](SETUP.md#2a-set-up-ordinary-phone-calls), [Telegram voice calls](SETUP.md#2b-set-up-telegram-voice-calls), or both. [Telegram messaging](SETUP.md#optional-telegram-messages) is separate and optional.
-3. Check status and make [one authorized test call from the CLI](SETUP.md#3-check-status-and-make-a-test-call).
-4. Connect [Codex or another local MCP client](SETUP.md#4-connect-your-agent), or follow the separate [ChatGPT Web setup](docs/chatgpt-web.md).
-
-Or give a coding agent this prompt:
-
-> Set up ChatGPT Phone Calls from this checkout. Read SETUP.md and start with the offline demo. Help me connect the calling channels I choose and register the local MCP server. Let me enter all credentials and codes myself outside chat. Do not dial until I give you an exact test destination and authorize the call.
+1. [Configure the relay](SETUP.md#1-configure-the-relay): create `.env` and set `OPENAI_API_KEY` and a relay token.
+2. Set up [ordinary phone calls](SETUP.md#2a-set-up-ordinary-phone-calls), [Telegram voice calls](SETUP.md#2b-set-up-telegram-voice-calls), or both. [Telegram messaging](SETUP.md#optional-telegram-messages) is off by default.
+3. [Check relay status](SETUP.md#3-check-status-and-make-a-test-call) without dialing.
+4. Connect [a local MCP client](SETUP.md#4-connect-your-agent) or [your own private plugin for ChatGPT Web](docs/chatgpt-web.md). The terminal can use the relay directly.
 
 ## How to make phone calls with ChatGPT
 

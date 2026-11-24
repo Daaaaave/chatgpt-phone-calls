@@ -1,6 +1,6 @@
 # Setup
 
-Start here if you want a self-hosted relay for phone, Telegram, or both. Follow the authentication steps yourself; don't paste credentials or verification codes into an agent conversation.
+Most people can start with the [copyable setup prompt in the README](README.md#let-an-agent-set-it-up). These steps are the reference for you and your agent. The agent can run the commands, prepare the config files, and check the service. You sign in, enter credentials directly where they belong, verify your phone number, and scan any Telegram QR code. Don't paste keys or verification codes into chat.
 
 ## Before you start
 
@@ -16,15 +16,14 @@ git clone https://github.com/Daaaaave/chatgpt-phone-calls.git
 cd chatgpt-phone-calls
 ```
 
-From the checkout, check your tools and try the demo:
+From the checkout, run the demo first:
 
 ```sh
 node --version
-docker compose version
 npm run demo
 ```
 
-The demo is offline. A passing demo does not validate provider credentials or make a real call.
+The demo only needs Node.js and npm. It doesn't use Docker, check provider credentials, or dial anyone. For real calls, confirm Docker is running and `docker compose version` works before continuing.
 
 ## 1. Configure the relay
 
@@ -35,9 +34,9 @@ test -e .env || (umask 077; cp .env.example .env)
 chmod 600 .env
 ```
 
-Edit `.env` locally. Set `OPENAI_API_KEY`. Generate a 64-character hex `CALLER_CLOUD_TOKEN` with `openssl rand -hex 32`. If using Telegram, run the command again and use the different value for `CALLER_TELEGRAM_TOKEN`. The relay token is for CLI/MCP access; the second token stays between the relay and the Telegram container.
+Edit `.env` locally. Set `OPENAI_API_KEY`. Generate a 64-character hex `CALLER_CLOUD_TOKEN` with `openssl rand -hex 32`. If using Telegram, generate a different value for `CALLER_TELEGRAM_TOKEN`. The relay token is for CLI/MCP access; the second token stays between the relay and the Telegram container. If an agent generates the tokens for you, have it write them directly into the private config without printing them.
 
-The Compose file binds the relay to `127.0.0.1:47831` on the host. Keep that port private. Only the optional Web setup uses an authenticated HTTPS route. If the port is occupied, stop the conflicting service or use a separate host.
+The Compose file listens on `127.0.0.1:47831`, which is reachable only on the host by default. Keep it private. The optional Web setup uses an authenticated HTTPS route to reach it. If that port is already in use, identify what's running there before stopping anything.
 
 Upgrading an existing installation? The old `RINGER_*` settings and `ringer.mjs` still work. Use the `CALLER_*` settings shown here for new configuration; when both are set, the new names take precedence. The legacy MCP tool `ringer_status` remains an alias for `caller_status`.
 
@@ -87,7 +86,7 @@ The session stays in the Compose volume. Revoke it in Telegram's Devices setting
 
 ### Optional Telegram messages
 
-Set `CALLER_TELEGRAM_MESSAGING=1` in `.env` and in the MCP environment (`.env.mcp` or private Site settings). Leave `CALLER_TELEGRAM_CALLS=0` for a messaging-only Telegram installation. Only Saved Messages and individually approved chats are available. For a chat you are authorized to share with the AI, stop the sidecar and approve it by Telegram username:
+Set `CALLER_TELEGRAM_MESSAGING=1` in `.env` and in the MCP environment (`.env.mcp` or private Site settings). For messaging without voice calls, set `CALLER_TELEGRAM_CALLS=0`, generate the Telegram token, and follow the same QR login and container startup steps above. Only Saved Messages and individually approved chats are available. To approve a chat you are authorized to share with the AI:
 
 ```sh
 docker compose --profile telegram stop telegram
@@ -99,7 +98,7 @@ Reconnect the MCP client and call `telegram_peers` to see approved peer IDs. To 
 
 ## 3. Check status and make a test call
 
-On the relay host, run:
+Start with a check that does not dial anyone. On the relay host, run:
 
 ```sh
 node --env-file=.env caller.mjs status
@@ -109,7 +108,9 @@ node --env-file=.env caller.mjs telegram-status
 
 For phone calls, check that `busy` is false and that your expected `caller_ids` and `dial_prefixes` are present. This confirms the relay configuration, not carrier reachability. For Telegram voice, wait for `connected: true` and `native_calls: true`; startup can take a few seconds.
 
-Use an explicitly authorized test destination. Replace the placeholder; do not dial it literally.
+### Optional test call
+
+You can connect your client in step 4 before making any call. To verify real audio, make one call only after you have chosen and authorized the exact destination. Replace the placeholder; do not dial it literally.
 
 For an ordinary phone number:
 
@@ -123,7 +124,7 @@ For Telegram:
 node --env-file=.env caller.mjs telegram-call @YOUR_TEST_CONTACT "Say this is an AI test call and ask whether the recipient can hear you."
 ```
 
-Follow the returned call ID. The watch command waits up to 12 seconds; keep watching with the latest returned cursor while the call is active.
+Follow the returned call ID with `watch`. Each check waits up to 12 seconds. Run it again with the cursor from the last response while the call is active.
 
 ```sh
 node --env-file=.env caller.mjs watch CALL_ID 0 important
@@ -170,4 +171,5 @@ Other stdio clients use the same executable and arguments. Restart or reconnect 
 | Telephone call rejected | Check the destination format and allowlist, billing, verified caller ID, SIP termination settings and carrier Geo Permissions. |
 | Telegram not connected or calls unavailable | Complete QR sign-in, check `CALLER_TELEGRAM_CALLS=1`, apply the `.env` changes as above, and check `docker compose --profile telegram logs telegram`. |
 | MCP tools missing | Use an absolute path to the stdio script, run `npm ci`, and reconnect the MCP client after changing the tools. |
+| CLI or MCP says unauthorized | Check that the client and relay use the same `CALLER_CLOUD_TOKEN`. Recreate the Compose service after changing `.env`. |
 | Call outcome is unconfirmed | Check the existing call ID and provider or Telegram before retrying. Never start a new call solely because a request timed out. |
